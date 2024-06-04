@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -16,12 +17,17 @@ const (
 )
 
 var (
-	dryRun  = flag.Bool("dry-run", false, "dry run")
-	minutes = flag.Int("minutes", 0, "number of minutes to keep ec2 alive")
-	hours   = flag.Int("hours", 0, "number of hours to keep ec2s alive")
+	versionFlag = flag.Bool("version", false, "print version")
+	dryRun      = flag.Bool("dry-run", false, "dry run")
+	minutes     = flag.Int("minutes", 0, "number of minutes to keep ec2 alive")
+	hours       = flag.Int("hours", 0, "number of hours to keep ec2s alive")
 )
 
 func main() {
+	if *versionFlag {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 	log.Println("started deadline version", version)
 	flag.Parse()
 
