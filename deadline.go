@@ -24,12 +24,12 @@ var (
 )
 
 func main() {
+	flag.Parse()
 	if *versionFlag {
 		fmt.Println(version)
 		os.Exit(0)
 	}
 	log.Println("started deadline version", version)
-	flag.Parse()
 
 	sess := must(session.NewSession(&aws.Config{Region: aws.String("us-east-1")}))
 	svc := ec2.New(sess)
