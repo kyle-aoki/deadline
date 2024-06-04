@@ -8,5 +8,4 @@ Usage of deadline:
     	number of minutes to keep ec2 alive
   -version
     	print version
-
 ```
