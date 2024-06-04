@@ -17,7 +17,6 @@ const (
 
 var (
 	dryRun  = flag.Bool("dry-run", false, "dry run")
-	seconds = flag.Int("seconds", 0, "number of seconds to keep ec2 alive")
 	minutes = flag.Int("minutes", 0, "number of minutes to keep ec2 alive")
 	hours   = flag.Int("hours", 0, "number of hours to keep ec2s alive")
 )
@@ -29,16 +28,24 @@ func main() {
 	sess := must(session.NewSession(&aws.Config{Region: aws.String("us-east-1")}))
 	svc := ec2.New(sess)
 
-	log.Printf("waiting for %d hours, %d minutes, and %d seconds before terminating instances", *hours, *minutes, *seconds)
-	time.Sleep(time.Hour * time.Duration(*hours))
-	time.Sleep(time.Minute * time.Duration(*minutes))
-	time.Sleep(time.Second * time.Duration(*seconds))
+	log.Printf("waiting for %d hours and %d minutes before terminating instances", *hours, *minutes)
+	totalTime := (time.Hour * time.Duration(*hours)) + (time.Minute * time.Duration(*minutes))
+	future := time.Now().Add(totalTime)
+
+	for time.Now().Before(future) {
+		var runningInstances int
+		for _, res := range getReservations(svc) {
+			runningInstances += len(res.Instances)
+		}
+		timeUntilTermination := time.Until(future).Truncate(time.Second).String()
+		log.Printf("%s until termination, %d instances are running", timeUntilTermination, runningInstances)
+		time.Sleep(time.Minute * 1)
+	}
 
 	for {
 		var instancesToDelete []*string
-		dio := must(svc.DescribeInstances(&ec2.DescribeInstancesInput{MaxResults: aws.Int64(1000)}))
-		for _, reservation := range dio.Reservations {
-			for _, inst := range reservation.Instances {
+		for _, res := range getReservations(svc) {
+			for _, inst := range res.Instances {
 				if *inst.State.Name == ec2.InstanceStateNameShuttingDown || *inst.State.Name == ec2.InstanceStateNameTerminated {
 					continue
 				}
@@ -55,6 +62,10 @@ func main() {
 		}
 		time.Sleep(time.Second * 10)
 	}
+}
+
+func getReservations(svc *ec2.EC2) []*ec2.Reservation {
+	return must(svc.DescribeInstances(&ec2.DescribeInstancesInput{MaxResults: aws.Int64(1000)})).Reservations
 }
 
 func check(err error) {
